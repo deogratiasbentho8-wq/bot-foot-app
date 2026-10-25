@@ -9,19 +9,30 @@
   body { font-family: sans-serif; margin: 0; padding: 16px;
          background: var(--tg-theme-bg-color, #ffffff);
          color: var(--tg-theme-text-color, #000000); }
-  h1 { font-size: 20px; }
+  h1 { font-size: 20px; margin: 0 0 8px; }
+  #info { font-size: 14px; opacity: 0.8; margin-bottom: 12px; }
   .match { background: var(--tg-theme-secondary-bg-color, #f0f0f0);
            border-radius: 12px; padding: 12px; margin-bottom: 10px; }
-  .score { font-weight: bold; font-size: 18px; }
-  .proba { font-size: 14px; opacity: 0.8; margin-top: 4px; }
+  .comp { font-size: 12px; opacity: 0.7; }
+  .score { font-weight: bold; font-size: 17px; margin: 4px 0; }
+  .proba { font-size: 14px; opacity: 0.85; }
+  button { background: var(--tg-theme-button-color, #2481cc);
+           color: var(--tg-theme-button-text-color, #ffffff);
+           border: none; border-radius: 8px; padding: 8px 14px;
+           font-size: 14px; margin-bottom: 12px; }
+  .avert { font-size: 12px; opacity: 0.6; margin-top: 16px; }
 </style>
 </head>
 <body>
 <h1 id="titre">⚽ Foot Pronos</h1>
-<p>Matchs du jour (exemples pour tester)</p>
+<div id="info"></div>
+<button id="rafraichir">🔄 Actualiser</button>
 <div id="liste"></div>
+<div class="avert">Les pronostics sont des estimations statistiques, pas des certitudes.</div>
 
 <script>
+  const API_URL = "https://bot-foot-api.onrender.com/api/matchs";
+
   const tg = window.Telegram.WebApp;
   tg.ready();
   tg.expand();
@@ -31,23 +42,64 @@
     document.getElementById("titre").textContent = "⚽ Salut " + user.first_name + " !";
   }
 
-  const matchs = [
-    { dom: "Arsenal", ext: "Chelsea", score: "2 - 1", etat: "🔴 65'", p: "52% / 25% / 23%" },
-    { dom: "Real Madrid", ext: "Getafe", score: "vs", etat: "🕒 21:00", p: "68% / 20% / 12%" },
-    { dom: "Inter", ext: "Napoli", score: "1 - 1", etat: "✅ Terminé", p: "40% / 28% / 32%" }
-  ];
-
   const liste = document.getElementById("liste");
-  matchs.forEach(m => {
-    const div = document.createElement("div");
-    div.className = "match";
-    div.innerHTML =
-      "<div>" + m.etat + "</div>" +
-      "<div class='score'>" + m.dom + " " + m.score + " " + m.ext + "</div>" +
-      "<div class='proba'>Pronostic (dom. / nul / ext.) : " + m.p + "</div>";
-    liste.appendChild(div);
-  });
+  const info = document.getElementById("info");
+
+  function ajouter(parent, classe, texte) {
+    const d = document.createElement("div");
+    d.className = classe;
+    d.textContent = texte;
+    parent.appendChild(d);
+  }
+
+  function etat(m) {
+    if (m.statut === "IN_PLAY" || m.statut === "PAUSED") return "🔴 En direct";
+    if (m.statut === "FINISHED") return "✅ Terminé";
+    return "🕒 " + m.heure;
+  }
+
+  async function charger() {
+    if (!liste.children.length) {
+      info.textContent = "Chargement… (la première fois, cela peut prendre une minute)";
+    }
+    try {
+      const r = await fetch(API_URL);
+      const data = await r.json();
+      liste.innerHTML = "";
+      if (data.erreur) {
+        info.textContent = data.erreur;
+        return;
+      }
+      if (data.matchs.length === 0) {
+        info.textContent = "Aucun match aujourd'hui dans les compétitions couvertes.";
+        return;
+      }
+      info.textContent = data.matchs.length + " match(s) aujourd'hui (heure du Bénin)";
+      data.matchs.forEach(m => {
+        const carte = document.createElement("div");
+        carte.className = "match";
+        ajouter(carte, "comp", m.competition + " · " + etat(m));
+        const aDuScore = m.statut !== "TIMED" && m.statut !== "SCHEDULED" && m.score_dom !== null;
+        const milieu = aDuScore ? m.score_dom + " - " + m.score_ext : "vs";
+        ajouter(carte, "score", m.dom + " " + milieu + " " + m.ext);
+        if (m.pronostic) {
+          ajouter(carte, "proba",
+            "Pronostic : " + m.dom + " " + m.pronostic.dom + "% · Nul " +
+            m.pronostic.nul + "% · " + m.ext + " " + m.pronostic.ext + "%");
+        } else {
+          ajouter(carte, "proba", "Pronostic indisponible pour ce match");
+        }
+        liste.appendChild(carte);
+      });
+    } catch (e) {
+      info.textContent = "Impossible de charger les matchs. Réessaie dans un instant.";
+    }
+  }
+
+  document.getElementById("rafraichir").addEventListener("click", charger);
+  charger();
+  setInterval(charger, 60000);
 </script>
 </body>
-</html> 
+</html>
 
