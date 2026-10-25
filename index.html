@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foot Pronos</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  body { font-family: sans-serif; margin: 0; padding: 16px;
+         background: var(--tg-theme-bg-color, #ffffff);
+         color: var(--tg-theme-text-color, #000000); }
+  h1 { font-size: 20px; }
+  .match { background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+           border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .score { font-weight: bold; font-size: 18px; }
+  .proba { font-size: 14px; opacity: 0.8; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1 id="titre">⚽ Foot Pronos</h1>
+<p>Matchs du jour (exemples pour tester)</p>
+<div id="liste"></div>
+
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  tg.expand();
+
+  const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+  if (user) {
+    document.getElementById("titre").textContent = "⚽ Salut " + user.first_name + " !";
+  }
+
+  const matchs = [
+    { dom: "Arsenal", ext: "Chelsea", score: "2 - 1", etat: "🔴 65'", p: "52% / 25% / 23%" },
+    { dom: "Real Madrid", ext: "Getafe", score: "vs", etat: "🕒 21:00", p: "68% / 20% / 12%" },
+    { dom: "Inter", ext: "Napoli", score: "1 - 1", etat: "✅ Terminé", p: "40% / 28% / 32%" }
+  ];
+
+  const liste = document.getElementById("liste");
+  matchs.forEach(m => {
+    const div = document.createElement("div");
+    div.className = "match";
+    div.innerHTML =
+      "<div>" + m.etat + "</div>" +
+      "<div class='score'>" + m.dom + " " + m.score + " " + m.ext + "</div>" +
+      "<div class='proba'>Pronostic (dom. / nul / ext.) : " + m.p + "</div>";
+    liste.appendChild(div);
+  });
+</script>
+</body>
+</html>
